@@ -1,0 +1,58 @@
+package com.pkm.store.domain.order.service;
+
+import com.pkm.store.domain.cart.entity.CartItem;
+import com.pkm.store.domain.cart.repository.CartItemRepository;
+import com.pkm.store.domain.member.entity.Member;
+import com.pkm.store.domain.member.repository.MemberRepository;
+import com.pkm.store.domain.order.entity.Order;
+import com.pkm.store.domain.order.entity.OrderItem;
+import com.pkm.store.domain.order.repository.OrderRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final MemberRepository memberRepository;
+    private final CartItemRepository cartItemRepository;
+
+    /**
+     * 장바구니 상품 일괄 주문 (포켓몬 상자 구매)
+     */
+    @Transactional
+    public Long createOrderFromCart(Long memberId) {
+        // 1. 주문하는 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
+
+        // 2. 장바구니 상품들 조회
+        List<CartItem> cartItems = cartItemRepository.findByMemberId(memberId);
+        if (cartItems.isEmpty()) {
+            throw new IllegalStateException("장바구니가 비어 있습니다.");
+        }
+
+        // 3. 장바구니 아이템 -> 주문 아이템으로 변환 (이 과정에서 재고가 자동으로 깎임)
+        List<OrderItem> orderItems = new ArrayList<>();
+        for (CartItem cartItem : cartItems) {
+            OrderItem orderItem = OrderItem.createOrderItem(cartItem.getProduct(), cartItem.getCount());
+            orderItems.add(orderItem);
+        }
+
+        // 4. 주문 생성 및 DB 저장 (cascade = CascadeType.ALL 덕분에 OrderItem도 같이 저장됨)
+        Order order = Order.createOrder(member, orderItems);
+        orderRepository.save(order);
+
+        // 5. 결제 완료된 장바구니 비우기
+        cartItemRepository.deleteByMemberId(memberId);
+
+        // 생성된 주문 번호 반환
+        return order.getId();
+    }
+}
