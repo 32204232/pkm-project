@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { productApi } from '../api/productApi'; // 우리가 만든 서비스 레이어 사용
+import { useState, useEffect, useCallback } from 'react';
+import { productApi } from '../api/productApi';
 import type { Product } from '../types/product';
 
-// 1. 특정 상품 상세 정보를 관리하는 훅 (이름을 useProduct로 통일!)
+// 1. 특정 상품 상세 정보를 관리하는 훅
 export const useProduct = (id: string | undefined) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -11,17 +11,24 @@ export const useProduct = (id: string | undefined) => {
   useEffect(() => {
     if (!id) return;
     
-    setLoading(true);
-    productApi.getProductById(id)
-      .then((data) => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const data = await productApi.getProductById(id);
         setProduct(data);
         setError(null);
-      })
-      .catch((err) => {
+      } catch (err: any) {
+        const errMsg = '상품 상세 정보를 가져오는데 실패했습니다.';
         console.error(err);
-        setError('Failed to fetch product details.');
-      })
-      .finally(() => setLoading(false));
+        setError(errMsg);
+        // 사용자에게 직접적인 피드백 제공
+        alert(errMsg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
   }, [id]);
 
   return { product, loading, error };
@@ -33,19 +40,30 @@ export const useProductList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // 여기도 나중에 productApi.getAllProducts() 처럼 만들어서 교체하면 더 깔끔합니다!
-    productApi.getAllProducts() 
-      .then((data) => {
-        setProducts(data);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Failed to fetch product list.');
-      })
-      .finally(() => setLoading(false));
+  // 로직을 함수로 분리하여 나중에 '새로고침' 기능을 구현할 수 있게 함
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await productApi.getAllProducts();
+      setProducts(data);
+      setError(null);
+    } catch (err: any) {
+      const errMsg = '상품 목록을 불러오는 중 오류가 발생했습니다.';
+      console.error(err);
+      setError(errMsg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { products, loading, error };
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  return { 
+    products, 
+    loading, 
+    error, 
+    refresh: fetchProducts // 나중에 관리자 페이지에서 등록 후 목록 갱신할 때 사용!
+  };
 };

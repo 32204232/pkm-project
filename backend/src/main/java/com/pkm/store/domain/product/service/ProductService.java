@@ -10,15 +10,15 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 기본적으로 데이터를 읽기만 하겠다고 선언 (성능 향상)
+@Transactional(readOnly = true)
 public class ProductService {
 
     private final ProductRepository productRepository;
 
     /**
-     * [어드민 전용] 새로운 포켓몬 상자 등록
+     * [어드민 전용] 상품 등록
      */
-    @Transactional // 데이터를 변경(저장)하는 곳이므로 별도로 달아줍니다.
+    @Transactional
     public Long registerProduct(String name, int price, int stockQuantity, String imageUrl) {
         Product product = Product.builder()
                 .name(name)
@@ -27,23 +27,43 @@ public class ProductService {
                 .imageUrl(imageUrl)
                 .build();
 
-        Product savedProduct = productRepository.save(product);
-        return savedProduct.getId();
+        return productRepository.save(product).getId();
     }
 
     /**
-     * [모두] 전체 상품 목록 조회
+     * [어드민 전용] 상품 수정 (더티 체킹 활용)
+     */
+    @Transactional
+    public void updateProduct(Long id, String name, int price, int stockQuantity, String imageUrl) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 상품이 존재하지 않습니다. id=" + id));
+        
+        // 엔티티의 메서드를 호출하면 영속성 컨텍스트가 변경을 감지해 DB에 반영합니다.
+        product.updateProduct(name, price, stockQuantity, imageUrl);
+    }
+
+    /**
+     * [어드민 전용] 상품 삭제
+     */
+    @Transactional
+    public void deleteProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 상품이 존재하지 않습니다. id=" + id));
+        productRepository.delete(product);
+    }
+
+    /**
+     * 전체 상품 조회
      */
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 
     /**
-     * [모두] 단일 상품 상세 조회
+     * 단일 상품 상세 조회
      */
     public Product getProduct(Long productId) {
         return productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 포켓몬 상자입니다.")); 
-                // 나중에 예외 처리를 더 예쁘게 다듬을 겁니다.
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 포켓몬 상자입니다."));
     }
 }

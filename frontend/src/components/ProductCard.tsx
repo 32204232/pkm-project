@@ -20,21 +20,21 @@ const ProductCard = ({ product }: Props) => {
     /* 전체 카드를 Link로 감싸서 어디를 눌러도 상세페이지로 이동하게 합니다. */
     <Link 
       to={`/product/${product.id}`} 
-      className="group relative flex flex-col bg-white rounded-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      // [보완] 품절 시 opacity-60을 추가하여 흐리게 보이게 합니다.
+      className={`group relative flex flex-col bg-white rounded-lg transition-all duration-300 hover:shadow-xl ${isSoldOut ? 'opacity-60' : 'hover:-translate-y-1'}`}
     >
-      {/* 이미지 영역 */}
       <div className="relative aspect-square overflow-hidden rounded-t-lg bg-gray-100">
         <img
           src={product.imageUrl || 'https://via.placeholder.com/300'}
           alt={product.name}
+          // [유지] 기존 회색조 처리
           className={`w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110 ${isSoldOut ? 'grayscale' : ''}`}
         />
         
-        {/* 품절 오버레이 */}
         {isSoldOut && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-            <span className="text-white font-black text-2xl tracking-tighter border-4 border-white px-4 py-1 rotate-[-10deg]">
-              SOLD OUT
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
+            <span className="text-white font-black text-xl tracking-tighter border-2 border-white px-3 py-1 rotate-[-10deg]">
+              OUT OF STOCK
             </span>
           </div>
         )}

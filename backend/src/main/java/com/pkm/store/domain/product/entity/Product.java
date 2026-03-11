@@ -36,11 +36,18 @@ public class Product extends BaseEntity {
         this.imageUrl = imageUrl;
     }
 
-    // 비즈니스 로직: 재고 감소
+public void updateProduct(String name, int price, int stockQuantity, String imageUrl) {
+        this.name = name;
+        this.price = price;
+        this.stockQuantity = stockQuantity;
+        this.imageUrl = imageUrl;
+    }
+
+    // 재고 관리 로직 (나중에 주문 시 사용)
     public void removeStock(int quantity) {
         int restStock = this.stockQuantity - quantity;
         if (restStock < 0) {
-            throw new RuntimeException("재고가 부족합니다."); // 나중에 커스텀 예외로 변경
+            throw new IllegalStateException("재고가 부족합니다.");
         }
         this.stockQuantity = restStock;
     }

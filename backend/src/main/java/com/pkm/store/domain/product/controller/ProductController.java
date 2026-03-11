@@ -19,7 +19,7 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // 1. [어드민] 포켓몬 상자 등록 API
+    // 1. [어드민] 상품 등록
     @PostMapping
     public ResponseEntity<String> registerProduct(@Valid @RequestBody ProductCreateRequest request) {
         Long productId = productService.registerProduct(
@@ -28,24 +28,46 @@ public class ProductController {
                 request.getStockQuantity(),
                 request.getImageUrl()
         );
-        return ResponseEntity.ok("상품 등록 완료! 상품 번호: " + productId);
+        return ResponseEntity.ok("상품 등록 완료! 번호: " + productId);
     }
 
-    // 2. [모두] 전체 상품 목록 조회 API
+    // 2. 전체 상품 조회
     @GetMapping
     public ResponseEntity<List<ProductResponse>> getAllProducts() {
         List<Product> products = productService.getAllProducts();
-        
-        // Entity 리스트를 DTO 리스트로 예쁘게 포장해서 반환
         List<ProductResponse> response = products.stream()
                 .map(ProductResponse::new)
                 .collect(Collectors.toList());
-                
         return ResponseEntity.ok(response);
     }
+
+    // 3. 개별 상품 상세 조회
     @GetMapping("/{id}")
-public ResponseEntity<ProductResponse> getProduct(@PathVariable Long id) {
-    Product product = productService.getProduct(id); // Service에 getProduct(id) 메서드가 있다고 가정
-    return ResponseEntity.ok(new ProductResponse(product));
-}
+    public ResponseEntity<ProductResponse> getProduct(@PathVariable Long id) {
+        Product product = productService.getProduct(id);
+        return ResponseEntity.ok(new ProductResponse(product));
+    }
+
+    // 4. [어드민] 상품 정보 수정 (재고 변경 등) [추가]
+    @PutMapping("/{id}")
+    public ResponseEntity<String> updateProduct(
+            @PathVariable Long id, 
+            @Valid @RequestBody ProductCreateRequest request) {
+        
+        productService.updateProduct(
+                id,
+                request.getName(),
+                request.getPrice(),
+                request.getStockQuantity(),
+                request.getImageUrl()
+        );
+        return ResponseEntity.ok("상품 수정이 완료되었습니다.");
+    }
+
+    // 5. [어드민] 상품 삭제 [추가]
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.ok("상품이 삭제되었습니다.");
+    }
 }
