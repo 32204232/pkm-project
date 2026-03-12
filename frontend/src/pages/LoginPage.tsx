@@ -23,8 +23,7 @@ const LoginPage = () => {
       const response = await authApi.login({ email, password });
       
       // 금고(Zustand)에 저장
-      login(response.accessToken, email);
-      
+      login(response.accessToken, email, response.role);
       // 메인 페이지로 이동
       alert('반가워요! 로그인에 성공했습니다.');
       navigate('/'); 

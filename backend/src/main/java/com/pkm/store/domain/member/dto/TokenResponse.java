@@ -6,5 +6,6 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class TokenResponse {
-    private String accessToken; // 프론트엔드가 저장할 JWT 토큰
+    private String accessToken;
+    private String role; // [★추가★]
 }

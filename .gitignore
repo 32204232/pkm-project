@@ -29,3 +29,6 @@ yarn-error.log*
 # 5. OS 파일
 .DS_Store
 Thumbs.db
+# VS Code 설정 파일 (환경변수, 보안키 포함) 제외
+.vscode/
+launch.json

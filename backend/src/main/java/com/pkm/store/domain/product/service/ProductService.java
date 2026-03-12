@@ -1,12 +1,20 @@
 package com.pkm.store.domain.product.service;
 
+import com.pkm.store.domain.product.dto.ProductCreateRequest;
 import com.pkm.store.domain.product.entity.Product;
 import com.pkm.store.domain.product.repository.ProductRepository;
+import io.awspring.cloud.s3.S3Template; // [★추가★] AWS S3 마법 지팡이
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -14,32 +22,64 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    
+    // [★추가★] S3 통신을 아주 쉽게 만들어주는 템플릿 도구
+    private final S3Template s3Template; 
+
+    // [★추가★] application.yaml에 적어둔 버킷 이름(pkm-store-image-bucket)을 쏙 빼온다.
+    @Value("${spring.cloud.aws.s3.bucket}")
+    private String bucketName;
 
     /**
-     * [어드민 전용] 상품 등록
+     * [어드민 전용] 상품 등록 (AWS S3 이미지 파일 업로드 적용!)
      */
     @Transactional
-    public Long registerProduct(String name, int price, int stockQuantity, String imageUrl) {
+    public Long createProduct(ProductCreateRequest request, MultipartFile imageFile) {
+        String imageUrl = null;
+
+        // 1. S3 이미지 업로드 로직 (이전과 동일)
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                String originalFilename = imageFile.getOriginalFilename();
+                String savedFilename = UUID.randomUUID() + "_" + originalFilename;
+                InputStream inputStream = imageFile.getInputStream();
+                var s3Resource = s3Template.upload(bucketName, savedFilename, inputStream);
+                imageUrl = s3Resource.getURL().toString();
+            } catch (IOException e) {
+                throw new RuntimeException("S3로 이미지를 전송하는 중 오류가 발생했습니다 삐까!", e);
+            }
+        }
+
+        // 2. 상품 엔티티 생성 [★수정: 새로운 4가지 데이터 추가 조립!★]
         Product product = Product.builder()
-                .name(name)
-                .price(price)
-                .stockQuantity(stockQuantity)
+                .name(request.getName())
+                .price(request.getPrice())
+                .stockQuantity(request.getStockQuantity())
                 .imageUrl(imageUrl)
+                .category(request.getCategory())     // 추가됨!
+                .series(request.getSeries())         // 추가됨!
+                .status(request.getStatus())         // 추가됨!
+                .releaseDate(request.getReleaseDate()) // 추가됨!
                 .build();
 
-        return productRepository.save(product).getId();
+        productRepository.save(product);
+        return product.getId();
     }
 
     /**
      * [어드민 전용] 상품 수정 (더티 체킹 활용)
+     * (Product 엔티티에 updateProduct 메서드도 파라미터가 늘어나야 한다!)
      */
     @Transactional
-    public void updateProduct(Long id, String name, int price, int stockQuantity, String imageUrl) {
+    public void updateProduct(Long id, ProductCreateRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 상품이 존재하지 않습니다. id=" + id));
         
-        // 엔티티의 메서드를 호출하면 영속성 컨텍스트가 변경을 감지해 DB에 반영합니다.
-        product.updateProduct(name, price, stockQuantity, imageUrl);
+        // ★ Product.java 안에 있는 updateProduct 메서드도 아래처럼 고쳐줘야 한다!
+        product.updateProduct(
+            request.getName(), request.getPrice(), request.getStockQuantity(), request.getImageUrl(),
+            request.getCategory(), request.getSeries(), request.getStatus(), request.getReleaseDate()
+        );
     }
 
     /**

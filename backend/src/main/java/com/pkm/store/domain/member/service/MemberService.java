@@ -1,5 +1,6 @@
 package com.pkm.store.domain.member.service;
 
+import com.pkm.store.domain.member.dto.TokenResponse;
 import com.pkm.store.domain.member.entity.Member;
 import com.pkm.store.domain.member.repository.MemberRepository;
 import com.pkm.store.global.jwt.JwtUtil;
@@ -43,17 +44,26 @@ public class MemberService {
         
         return savedMember.getId();
     }
-    public String login(String email, String password) {
-        // 1. 회원이 존재하는지 확인
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
+    @Transactional(readOnly = true)
+    public TokenResponse login(String email, String password) {
+    // 1. DB에서 회원 찾기 (이메일로)
+    Member member = memberRepository.findByEmail(email)
+            .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
 
-        // 2. 비밀번호가 맞는지 확인 (평문 비밀번호와 DB의 암호화된 비밀번호를 비교)
-        if (!passwordEncoder.matches(password, member.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
-
-        // 3. 비밀번호가 맞다면 JWT 토큰 생성해서 반환
-        return jwtUtil.generateToken(member.getEmail(), member.getRole().name());
+    // 2. 비밀번호 맞는지 확인 (자네가 PasswordEncoder를 쓰고 있다면)
+    if (!passwordEncoder.matches(password, member.getPassword())) {
+        throw new IllegalArgumentException("잘못된 비밀번호입니다.");
     }
+
+    // 3. 권한(Role) 정보 빼오기 (USER 또는 ADMIN)
+    String role = member.getRole().name();
+
+    // 4. JwtUtil을 써서 토큰 만들기 (자네 JwtUtil 보니까 이름이 generateToken 이더군!)
+    String accessToken = jwtUtil.generateToken(member.getEmail(), role);
+
+    // 5. 토큰이랑 권한을 TokenResponse 박스에 예쁘게 담아서 컨트롤러에게 전달!
+    return new TokenResponse(accessToken, role);
+}
+
+    
 }

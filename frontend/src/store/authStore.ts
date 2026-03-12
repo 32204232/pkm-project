@@ -6,8 +6,10 @@ interface AuthState {
   isLoggedIn: boolean;
   accessToken: string | null;
   userEmail: string | null;
-  // 액션(함수)들
-  login: (token: string, email: string) => void;
+  userRole: string | null; // [★추가★] 관리자 여부 확인용 권한 (USER / ADMIN)
+  
+  // 액션(함수)들 - login 함수가 role도 받도록 수정!
+  login: (token: string, email: string, role: string) => void; 
   logout: () => void;
 }
 
@@ -19,14 +21,16 @@ export const useAuthStore = create<AuthState>()(
       isLoggedIn: false,
       accessToken: null,
       userEmail: null,
+      userRole: null, // [★추가★]
 
       // 로그인 처리: 데이터 채우고 토큰은 localStorage에 자동 저장됨
-      login: (token, email) => {
-        localStorage.setItem('accessToken', token); // Axios 인터셉터가 여기서 꺼내 씁니다.
+      login: (token, email, role) => { // [★수정★] role 매개변수 추가
+        localStorage.setItem('accessToken', token); 
         set({
           isLoggedIn: true,
           accessToken: token,
           userEmail: email,
+          userRole: role, // [★추가★] 스토어에 권한 저장
         });
       },
 
@@ -37,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
           isLoggedIn: false,
           accessToken: null,
           userEmail: null,
+          userRole: null, // [★추가★]
         });
       },
     }),

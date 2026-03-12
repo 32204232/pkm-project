@@ -1,28 +1,38 @@
 spring:
+  # 1. 데이터베이스 설정
   datasource:
-    # 데이터베이스 주소 (pokemon_store 라는 이름의 DB에 연결하겠다는 뜻)
     url: jdbc:mysql://localhost:3306/pokemon_store?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-    username: root        # MySQL 설치할 때 만든 아이디 (보통 root)
-    password: ehdgusqja12! # MySQL 설치할 때 만든 비밀번호를 적어주세요!
+    username: root
+    password: ${DB_PASSWORD} # [수정] 이것도 launch.json에 "DB_PASSWORD": "ehdgusqja12!" 로 빼주세요!
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  # 2. JPA 설정
   jpa:
     hibernate:
-      # ★핵심★ 우리가 자바로 짠 Entity 코드를 보고 MySQL에 테이블을 '자동'으로 만들어줍니다.
       ddl-auto: update 
-    show-sql: true # DB에 날아가는 쿼리문을 콘솔창에 보여줌
+    show-sql: true
     properties:
       hibernate:
-        format_sql: true # 쿼리문을 예쁘게 정렬해서 보여줌
-        default_batch_fetch_size: 1000 # 실무 필수 설정 (N+1 성능 최적화)
+        format_sql: true
+        default_batch_fetch_size: 1000
 
+  # 3. AWS S3 설정 (spring 아래로 쏙 들어왔습니다!)
+  cloud:
+    aws:
+      s3:
+        bucket: pkm-store-image-bucket
+      region:
+        static: ap-southeast-2 # [수정] 서울 리전으로 변경 완료!
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+
+# 로깅 설정 (spring과 같은 레벨)
 logging:
   level:
-    org.hibernate.SQL: debug # SQL 로그를 더 자세히 보기 위함
+    org.hibernate.SQL: debug
 
-# 기존 설정들 아래에 추가
+# JWT 설정 (spring과 같은 레벨)
 jwt:
-  # 주의: 실무에서는 절대 이렇게 쉬운 문자열을 쓰면 안 되고 무작위로 생성된 긴 키를 씁니다. (최소 32바이트 이상 필수)
   secret: my-super-secret-key-for-pokemon-store-backend-must-be-long
-  # 토큰 만료 시간 (밀리초 단위) -> 1시간 (1000 * 60 * 60)
   expiration: 3600000
