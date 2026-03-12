@@ -15,6 +15,10 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 1000
+        show_sql: true
+        # SQL의 ? 자리에 들어가는 파라미터를 로그로 보여줍니다.
+        use_sql_comments: true
+        # 이 설정이 핵심입니다!
 
   # 3. AWS S3 설정 (spring 아래로 쏙 들어왔습니다!)
   cloud:
@@ -31,6 +35,7 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace # 스택 트레이스 없이 값만 깔끔하게 보여줌
 
 # JWT 설정 (spring과 같은 레벨)
 jwt:
