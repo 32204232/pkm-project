@@ -1,20 +1,23 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 
 export const useOrder = () => {
   const navigate = useNavigate();
+  const [isOrdering, setIsOrdering] = useState(false);
 
-  const checkout = async (cartItemIds: number[]) => {
-    if (cartItemIds.length === 0) return alert('Your cart is empty.');
-    
+  const checkout = async () => {
     try {
-      await orderApi.createOrder(cartItemIds);
-      alert('Order Placed Successfully!');
-      navigate('/order-success'); // 주문 완료 페이지로 이동
+      setIsOrdering(true);
+      await orderApi.createOrder();
+      alert('주문이 성공적으로 완료되었습니다!');
+      navigate('/order-success');
     } catch (err) {
-      alert('Order failed. Please try again.');
+      console.error('Order failed', err);
+    } finally {
+      setIsOrdering(false);
     }
   };
 
-  return { checkout };
+  return { checkout, isOrdering };
 };

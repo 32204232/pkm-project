@@ -5,6 +5,8 @@ import com.pkm.store.domain.member.dto.SignUpRequest;
 import com.pkm.store.domain.member.dto.TokenResponse;
 import com.pkm.store.domain.member.entity.Member;
 import com.pkm.store.domain.member.service.MemberService;
+import com.pkm.store.global.dto.ApiResponse;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,22 +20,14 @@ public class MemberController {
     private final MemberService memberService;
 
     @PostMapping("/signup")
-    public ResponseEntity<String> signUp(@Valid @RequestBody SignUpRequest request) {
-        Long memberId = memberService.join(
-                request.getEmail(),
-                request.getPassword(),
-                request.getNickname(),
-                Member.Role.USER
-        );
-        return ResponseEntity.ok("회원가입 성공! 회원 번호: " + memberId);
-    }
+public ResponseEntity<ApiResponse<Long>> signUp(@Valid @RequestBody SignUpRequest request) {
+    Long memberId = memberService.join(request.getEmail(), request.getPassword(), request.getNickname(), Member.Role.USER);
+    return ResponseEntity.ok(ApiResponse.success("회원가입 성공!", memberId)); //
+}
 
-    @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        // [★수정됨★] 서비스(Service)가 아예 TokenResponse(토큰+권한)를 통째로 만들어 오게 시킨다!
-        TokenResponse response = memberService.login(request.getEmail(), request.getPassword());
-        
-        // 프론트엔드에게 정상(200 OK) 상태로 포장해서 던져줌
-        return ResponseEntity.ok(response);
-    }
+@PostMapping("/login")
+public ResponseEntity<ApiResponse<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
+    TokenResponse response = memberService.login(request.getEmail(), request.getPassword());
+    return ResponseEntity.ok(ApiResponse.success("로그인 성공!", response)); //
+}
 }

@@ -3,6 +3,7 @@ package com.pkm.store.domain.order.controller;
 import com.pkm.store.domain.member.entity.Member;
 import com.pkm.store.domain.member.repository.MemberRepository;
 import com.pkm.store.domain.order.service.OrderService;
+import com.pkm.store.global.dto.ApiResponse; // [★추가]
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,16 +20,15 @@ public class OrderController {
     private final OrderService orderService;
     private final MemberRepository memberRepository;
 
-    // 장바구니 일괄 구매 (결제)
     @PostMapping
-    public ResponseEntity<String> createOrder(Principal principal) {
-        // 1. 토큰에서 이메일을 꺼내서 회원 번호(ID)를 찾습니다.
+    public ResponseEntity<ApiResponse<Long>> createOrder(Principal principal) { // [★반환형 변경]
         Member member = memberRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        // 2. 서비스에 회원 번호를 넘겨서 일괄 결제 및 재고 차감, 장바구니 비우기를 실행합니다.
+        // 전체 주문 로직 실행
         Long orderId = orderService.createOrderFromCart(member.getId());
 
-        return ResponseEntity.ok("주문이 완료되었습니다! 주문 번호: " + orderId);
+        // [★수정] ApiResponse 규격에 맞춰 주문 번호(Long)를 담아 보냄
+        return ResponseEntity.ok(ApiResponse.success("주문이 성공적으로 완료되었습니다.", orderId));
     }
 }
