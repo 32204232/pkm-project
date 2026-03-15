@@ -1,9 +1,9 @@
 spring:
-  # 1. 데이터베이스 설정
+  # 1. 데이터베이스 설정 (이제 launch.json의 값을 바라봅니다)
   datasource:
-    url: jdbc:mysql://localhost:3306/pokemon_store?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/pokemon_store?serverTimezone=Asia/Seoul
     username: root
-    password: ${DB_PASSWORD} # [수정] 이것도 launch.json에 "DB_PASSWORD": "ehdgusqja12!" 로 빼주세요!
+    password: vhzptahs12
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # 2. JPA 설정
@@ -15,29 +15,29 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 1000
-        show_sql: true
-        # SQL의 ? 자리에 들어가는 파라미터를 로그로 보여줍니다.
         use_sql_comments: true
-        # 이 설정이 핵심입니다!
+        # [★복구] 아까 잘려나간 핵심 설정입니다!
+        
 
-  # 3. AWS S3 설정 (spring 아래로 쏙 들어왔습니다!)
+  # 3. AWS S3 설정
   cloud:
     aws:
       s3:
         bucket: pkm-store-image-bucket
       region:
-        static: ap-southeast-2 # [수정] 서울 리전으로 변경 완료!
+        # [★수정] ap-northeast-2 가 서울입니다! (southeast는 호주 시드니입니다)
+        static: ap-northeast-2 
       credentials:
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
 
-# 로깅 설정 (spring과 같은 레벨)
+# 로깅 설정
 logging:
   level:
     org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace # 스택 트레이스 없이 값만 깔끔하게 보여줌
+    org.hibernate.orm.jdbc.bind: trace 
 
-# JWT 설정 (spring과 같은 레벨)
+# JWT 설정
 jwt:
   secret: my-super-secret-key-for-pokemon-store-backend-must-be-long
   expiration: 3600000

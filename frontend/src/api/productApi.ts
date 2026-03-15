@@ -1,9 +1,11 @@
-// src/api/productApi.ts
 import api from './axios';
 import type { Product } from '../types/product';
 
 export const productApi = {
-  // 이제 인터셉터가 data만 주므로 바로 Product[] 타입을 반환합니다.
+  // ❌ 수정 전 (에러 유발): 
+  // getAllProducts: async () => { const res = await api.get('/api/products'); return res.data; }
+  
+  // ✅ 수정 후 (배관 직결):
   getAllProducts: (): Promise<Product[]> => api.get('/api/products'),
 
   getProductById: (id: string): Promise<Product> => api.get(`/api/products/${id}`),
@@ -16,5 +18,7 @@ export const productApi = {
     return api.post('/api/products', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-  }
+  },
+
+  deleteProduct: (id: number): Promise<void> => api.delete(`/api/products/${id}`)
 };

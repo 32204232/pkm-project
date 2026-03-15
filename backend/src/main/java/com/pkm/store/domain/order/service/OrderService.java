@@ -55,4 +55,15 @@ public class OrderService {
         // 생성된 주문 번호 반환
         return order.getId();
     }
+
+    public Order getOrder(Long orderId, Long memberId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 주문입니다."));
+
+        // 남의 주문을 훔쳐보지 못하게 방어
+        if (!order.getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("본인의 주문 내역만 조회할 수 있습니다.");
+        }
+        return order;
+    }
 }

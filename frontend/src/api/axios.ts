@@ -1,6 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { useAuthStore } from '../store/authStore'; // [★핵심 1] Zustand 금고 소환
 
-// 백엔드 ApiResponse 포맷과 일치시킴
 export interface BaseResponse<T = any> {
     success: boolean;
     status: number;
@@ -16,7 +16,9 @@ const api = axios.create({
 // [Request Interceptor] 모든 요청에 자동으로 토큰 주입
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('token');
+        // [★핵심 2] localStorage가 아니라 Zustand 상태에서 직접 토큰을 꺼냅니다!
+        const token = useAuthStore.getState().accessToken;
+        
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -28,11 +30,18 @@ api.interceptors.request.use(
 // [Response Interceptor] 전역 에러 처리 및 데이터 언래핑
 api.interceptors.response.use(
     (response) => {
-        // 백엔드 ApiResponse { success, status, message, data } 중 data만 반환
         return response.data.data; 
     },
     async (error: AxiosError<BaseResponse>) => {
-        // 에러 처리는 기존대로 유지 (401, 403 등)
+        const status = error.response?.status;
+
+        // 401이나 403 에러 시 로그아웃 처리
+        if (status === 401 || status === 403) {
+            alert('인증이 만료되었거나 권한이 없습니다. 다시 로그인해주세요.');
+            useAuthStore.getState().logout(); // Zustand 로그아웃 호출
+            window.location.href = '/login';
+        }
+        
         return Promise.reject(error);
     }
 );

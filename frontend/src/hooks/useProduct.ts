@@ -40,17 +40,18 @@ export const useProductList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 로직을 함수로 분리하여 나중에 '새로고침' 기능을 구현할 수 있게 함
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const data = await productApi.getAllProducts();
-      setProducts(data);
+      
+      // [★핵심 방어 코드] data가 undefined로 오더라도 빈 배열([])을 넣어 에러 방지!
+      setProducts(data || []); 
       setError(null);
     } catch (err: any) {
-      const errMsg = '상품 목록을 불러오는 중 오류가 발생했습니다.';
       console.error(err);
-      setError(errMsg);
+      setError('상품 목록을 불러오는 중 오류가 발생했습니다.');
+      setProducts([]); // 에러 시에도 빈 배열 유지
     } finally {
       setLoading(false);
     }
