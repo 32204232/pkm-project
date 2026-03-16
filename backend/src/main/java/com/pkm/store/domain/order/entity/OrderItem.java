@@ -43,4 +43,8 @@ public class OrderItem extends BaseEntity {
         product.removeStock(count); // 재고 차감 로직 호출!
         return orderItem;
     }
+    // OrderItem.java 안에 추가해주세요!
+    public int getTotalPrice() {
+        return this.orderPrice * this.count; // (가격 * 수량)
+    }
 }

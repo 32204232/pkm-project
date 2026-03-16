@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID; // [★추가] 고유 결제 ID 생성을 위해 필요
 
 @Entity
 @Getter
@@ -24,27 +25,48 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "member_id")
     private Member member;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> orderItems = new ArrayList<>();
+    // [★핵심] 토스 결제창에 보낼 절대 중복되지 않는 난수 (초당 1만 건이 들어와도 안전함)
+    @Column(unique = true, nullable = false)
+    private String orderUid; 
+
+    private String paymentKey;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    public enum OrderStatus {
-        ORDER, CANCEL
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
+    public enum OrderStatus { PENDING, COMPLETED, CANCELLED }
+
+    // [결제 완료 처리]
+    public void completePayment(String paymentKey) {
+        this.status = OrderStatus.COMPLETED;
+        this.paymentKey = paymentKey;
     }
 
-    // [추가] 양방향 연관관계 편의 메서드
+    // 양방향 연관관계 편의 메서드
     public void addOrderItem(OrderItem orderItem) {
         orderItems.add(orderItem);
         orderItem.setOrder(this);
     }
 
-    // [추가] 실무형 생성 메서드: 주문 생성의 복잡한 과정을 한곳에 모아둡니다.
+    // [★추가] PaymentService에서 결제 금액 위변조를 검증하기 위해 꼭 필요한 총액 계산 로직!
+    public int getTotalPrice() {
+        int totalPrice = 0;
+        for (OrderItem orderItem : orderItems) {
+            totalPrice += orderItem.getTotalPrice(); 
+        }
+        return totalPrice;
+    }
+
+    // [★수정] 실무형 생성 메서드: 주문 생성 시 PENDING 상태 부여 및 UUID 발급
     public static Order createOrder(Member member, List<OrderItem> orderItems) {
         Order order = new Order();
         order.member = member;
-        order.status = OrderStatus.ORDER;
+        order.status = OrderStatus.PENDING; // [★수정] 결제 대기 상태로 시작!
+        order.orderUid = UUID.randomUUID().toString(); // [★수정] 주문 시점에 난수 즉시 발급!
+        
         for (OrderItem orderItem : orderItems) {
             order.addOrderItem(orderItem);
         }

@@ -41,3 +41,8 @@ logging:
 jwt:
   secret: my-super-secret-key-for-pokemon-store-backend-must-be-long
   expiration: 3600000
+
+# application.yaml의 맨 아래에 추가합니다.
+toss:
+  # 토스페이먼츠 개발자 센터에서 발급받은 '테스트 시크릿 키' (운영 시에는 실결제 키로 교체)
+  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

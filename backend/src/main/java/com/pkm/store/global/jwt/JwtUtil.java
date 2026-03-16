@@ -14,26 +14,40 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey secretKey;
-    private final long expiration;
+    private final long accessExpiration;
+    private final long refreshExpiration;
 
-    // application.yml에 적어둔 비밀키와 만료시간을 가져옵니다.
     public JwtUtil(@Value("${jwt.secret}") String secret,
-                   @Value("${jwt.expiration}") long expiration) {
+                   @Value("${jwt.access-expiration:900000}") long accessExpiration,    // 기본 15분
+                   @Value("${jwt.refresh-expiration:604800000}") long refreshExpiration) { // 기본 7일
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expiration = expiration;
+        this.accessExpiration = accessExpiration;
+        this.refreshExpiration = refreshExpiration;
     }
 
-    // 1. 토큰 생성 (로그인 성공 시 프론트엔드에게 줄 출입증)
-    public String generateToken(String email, String role) {
-        return Jwts.builder()
-                .subject(email) // 토큰의 주인 (이메일)
-                .claim("role", role) // 권한 정보 (USER, ADMIN)
-                .issuedAt(new Date()) // 발행 시간
-                .expiration(new Date(System.currentTimeMillis() + expiration)) // 만료 시간
-                .signWith(secretKey) // 우리 서버만의 비밀 도장 쾅!
-                .compact();
+    // 1. Access Token 생성 (짧은 수명)
+    public String generateAccessToken(String email, String role) {
+        return createToken(email, role, accessExpiration);
     }
 
+    // 2. Refresh Token 생성 (긴 수명)
+    public String generateRefreshToken(String email) {
+        // Refresh Token은 권한 정보 없이 이메일(식별자)만 가집니다.
+        return createToken(email, null, refreshExpiration);
+    }
+
+    private String createToken(String email, String role, long expirationTime) {
+        var builder = Jwts.builder()
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(secretKey);
+                
+        if (role != null) {
+            builder.claim("role", role);
+        }
+        return builder.compact();
+    }
     // 2. 프론트엔드가 가져온 토큰에서 이메일 빼내기
     public String getEmailFromToken(String token) {
         return getClaims(token).getSubject();
