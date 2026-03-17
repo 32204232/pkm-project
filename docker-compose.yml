@@ -1,0 +1,56 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # 1. 데이터베이스 (MySQL)
+  mysql:
+    image: mysql:8.0
+    container_name: pkm-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: vhzptahs12 # 기존 application.yaml에 있던 비밀번호
+      MYSQL_DATABASE: pokemon_store
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql # 컨테이너가 꺼져도 데이터가 날아가지 않도록 볼륨 마운트
+
+  # 2. 캐시 및 분산 락 (Redis)
+  redis:
+    image: redis:alpine
+    container_name: pkm-redis
+    ports:
+      - "6379:6379"
+
+  # 3. 백엔드 (Spring Boot)
+  backend:
+    build:
+      context: ./backend # backend 폴더의 Dockerfile을 읽어서 빌드
+    container_name: pkm-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # 도커 네트워크 안에서는 'localhost' 대신 컨테이너 이름('mysql', 'redis')으로 통신해야 합니다.
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pokemon_store?serverTimezone=Asia/Seoul
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      - mysql
+      - redis
+
+  # 4. 프론트엔드 (React / Vite)
+  frontend:
+    build:
+      context: ./frontend # frontend 폴더의 Dockerfile을 읽어서 빌드
+    container_name: pkm-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app # 로컬에서 코드를 수정하면 도커 안에도 즉시 반영되도록 연결
+      - /app/node_modules
+    depends_on:
+      - backend
+
+# 도커가 관리하는 영구 저장 공간 선언
+volumes:
+  mysql_data:
