@@ -66,4 +66,23 @@ public class OrderService {
         }
         return order;
     }
+    @Transactional
+    // [★30년차 최적화★] Member Id 대신 Facade에서 락을 걸며 가져온 Member와 CartItem 리스트를 그대로 받습니다.
+    public Long createOrderFromCart(Member member, List<CartItem> cartItems) {
+        
+        List<OrderItem> orderItems = new ArrayList<>();
+        for (CartItem cartItem : cartItems) {
+            // 재고 감소 로직은 이 안에서 안전하게 실행됨
+            OrderItem orderItem = OrderItem.createOrderItem(cartItem.getProduct(), cartItem.getCount());
+            orderItems.add(orderItem);
+        }
+
+        Order order = Order.createOrder(member, orderItems);
+        orderRepository.save(order);
+
+        // 결제 완료된 장바구니 비우기
+        cartItemRepository.deleteByMemberId(member.getId());
+
+        return order.getId();
+    }
 }

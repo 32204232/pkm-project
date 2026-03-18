@@ -6,7 +6,7 @@ export default function AdminProtectedRoute() {
 
   // 로그인을 안 했거나, 권한이 ADMIN이 아니면 쫓아낸다!
   if (!isLoggedIn || userRole !== 'ADMIN') {
-    alert('접근 권한이 없습니다! 포켓몬 센터로 돌아갑니다. 삐까!');
+    alert('접근 권한이 없습니다! 포켓몬 센터로 돌아갑니다.');
     return <Navigate to="/" replace />; // 메인 페이지로 강제 이동
   }
 

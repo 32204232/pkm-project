@@ -6,11 +6,12 @@ interface AuthState {
   isLoggedIn: boolean;
   accessToken: string | null;
   userEmail: string | null;
-  userRole: string | null; // [★추가★] 관리자 여부 확인용 권한 (USER / ADMIN)
+  userRole: string | null;
   
-  // 액션(함수)들 - login 함수가 role도 받도록 수정!
+  // 액션(함수)들
   login: (token: string, email: string, role: string) => void; 
   logout: () => void;
+  setAccessToken: (token: string) => void; // [★추가★] 토큰만 갱신하는 함수 타입 정의
 }
 
 // 2. 진짜 금고(Store) 생성
@@ -21,28 +22,34 @@ export const useAuthStore = create<AuthState>()(
       isLoggedIn: false,
       accessToken: null,
       userEmail: null,
-      userRole: null, // [★추가★]
+      userRole: null,
 
-      // 로그인 처리: 데이터 채우고 토큰은 localStorage에 자동 저장됨
-      login: (token, email, role) => { // [★수정★] role 매개변수 추가
+      // 로그인 처리
+      login: (token, email, role) => { 
         localStorage.setItem('accessToken', token); 
         set({
           isLoggedIn: true,
           accessToken: token,
           userEmail: email,
-          userRole: role, // [★추가★] 스토어에 권한 저장
+          userRole: role,
         });
       },
 
-      // 로그아웃 처리: 데이터 비우기
+      // 로그아웃 처리
       logout: () => {
         localStorage.removeItem('accessToken');
         set({
           isLoggedIn: false,
           accessToken: null,
           userEmail: null,
-          userRole: null, // [★추가★]
+          userRole: null,
         });
+      },
+
+      // [★추가★] AccessToken 재발급 시 토큰만 조용히 갱신하는 함수
+      setAccessToken: (token) => {
+        localStorage.setItem('accessToken', token);
+        set({ accessToken: token });
       },
     }),
     {

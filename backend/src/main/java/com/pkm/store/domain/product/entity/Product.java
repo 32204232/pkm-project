@@ -1,6 +1,9 @@
 package com.pkm.store.domain.product.entity;
 
 import com.pkm.store.global.entity.BaseEntity;
+import com.pkm.store.global.exception.CustomException;
+import com.pkm.store.global.exception.ErrorCode;
+
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -80,7 +83,8 @@ public void updateProduct(String name, int price, int stockQuantity, String imag
     public void removeStock(int quantity) {
         int restStock = this.stockQuantity - quantity;
         if (restStock < 0) {
-            throw new IllegalStateException("재고가 부족합니다.");
+            // 비즈니스 예외인 CustomException으로 변경하여 프론트에 정확한 에러 전달
+            throw new CustomException(ErrorCode.OUT_OF_STOCK);
         }
         this.stockQuantity = restStock;
     }
