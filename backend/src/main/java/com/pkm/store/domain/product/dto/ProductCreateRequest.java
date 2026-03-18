@@ -32,7 +32,7 @@ public class ProductCreateRequest {
     private Product.Series series;
 
    @NotNull(message = "판매 상태를 선택해주세요.")
-    private Product.ProductStatus status;;
+    private Product.ProductStatus status;
 
     @NotNull(message = "발매일을 입력해주세요.")
     private LocalDate releaseDate;

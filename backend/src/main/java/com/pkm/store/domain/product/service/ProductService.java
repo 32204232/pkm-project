@@ -71,16 +71,37 @@ public class ProductService {
      * (Product 엔티티에 updateProduct 메서드도 파라미터가 늘어나야 한다!)
      */
     @Transactional
-    public void updateProduct(Long id, ProductCreateRequest request) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 상품이 존재하지 않습니다. id=" + id));
-        
-        // ★ Product.java 안에 있는 updateProduct 메서드도 아래처럼 고쳐줘야 한다!
-        product.updateProduct(
-            request.getName(), request.getPrice(), request.getStockQuantity(), request.getImageUrl(),
-            request.getCategory(), request.getSeries(), request.getStatus(), request.getReleaseDate()
-        );
+public void updateProduct(Long id, ProductCreateRequest request, MultipartFile imageFile) {
+    // 1. 기존 상품 조회
+    Product product = productRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("해당 상품이 존재하지 않습니다. id=" + id));
+
+    // 2. 이미지 처리: 새 파일이 있으면 업로드 후 URL 갱신, 없으면 기존 URL 유지
+    String imageUrl = product.getImageUrl(); //
+    if (imageFile != null && !imageFile.isEmpty()) {
+        try {
+            String originalFilename = imageFile.getOriginalFilename();
+            String savedFilename = java.util.UUID.randomUUID() + "_" + originalFilename;
+            java.io.InputStream inputStream = imageFile.getInputStream();
+            var s3Resource = s3Template.upload(bucketName, savedFilename, inputStream);
+            imageUrl = s3Resource.getURL().toString(); //
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("S3 이미지 수정 중 오류 발생", e);
+        }
     }
+
+    // 3. 엔티티 업데이트 (8개 파라미터 순서 엄수)
+    product.updateProduct(
+        request.getName(), 
+        request.getPrice(), 
+        request.getStockQuantity(), 
+        imageUrl, //
+        request.getCategory(), 
+        request.getSeries(), 
+        request.getStatus(), 
+        request.getReleaseDate()
+    );
+}
 
     /**
      * [어드민 전용] 상품 삭제

@@ -1,18 +1,30 @@
 // 위치: frontend/src/api/axios.ts
 
-import axios from 'axios';
-import useAuthStore from '../store/authStore'; // Zustand 상태 관리 (토큰 저장소)
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import useAuthStore from './authStore';
 
-// 1. 기본 Axios 인스턴스 생성
+// 1. 기본 설정
 export const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8080', // 백엔드 주소 (운영 서버 배포 시 변경 필요)
-  withCredentials: true, // [★가장 중요★] 백엔드에서 만든 HttpOnly 쿠키(Refresh Token)를 주고받으려면 무조건 true여야 합니다!
+  baseURL: 'http://localhost:8080',
+  withCredentials: true,
 });
 
-// 2. 요청(Request) 인터셉터: 백엔드로 API를 쏠 때마다 자동으로 Access Token을 헤더에 붙여줍니다.
+// [★실무 핵심★] 재발급 상태를 관리하기 위한 변수들
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const addRefreshSubscriber = (callback: (token: string) => void) => {
+  refreshSubscribers.push(callback);
+};
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach((callback) => callback(token));
+  refreshSubscribers = [];
+};
+
+// 2. 요청 인터셉터: 모든 요청에 토큰 자동 부착
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Zustand 스토어에서 현재 들고 있는 Access Token을 꺼냅니다.
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -22,49 +34,73 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 3. 응답(Response) 인터셉터: 401 에러(토큰 만료)가 터졌을 때 심폐소생술을 시도합니다.
+// 3. 응답 인터셉터: 데이터 언래핑 + 심폐소생술(토큰 재발급)
 axiosInstance.interceptors.response.use(
-  (response) => response, // 성공하면 그대로 통과
-  async (error) => {
-    // 에러가 났던 원래의 요청 정보 (결제 버튼 누르기 등)
-    const originalRequest = error.config;
+  (response) => {
+    /**
+     * [★30년 차 노하우★] 데이터 언래핑
+     * 백엔드의 ApiResponse<T> 구조 { success, status, message, data } 에서
+     * 실제 필요한 data 부분만 반환합니다. 
+     * 이렇게 하면 API 호출부에서 .data.data를 쓸 필요가 없습니다.
+     */
+    return response.data.data;
+  },
+  async (error: AxiosError<any>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // 만약 에러가 401(권한 없음/토큰 만료)이고, 아직 재시도를 안 해봤다면?
+    // 401 에러(토큰 만료) 발생 시
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // 무한 루프 방지용 꼬리표 달기
+      
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          addRefreshSubscriber((token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(axiosInstance(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        // [★심폐소생술★] 백엔드의 /reissue API를 찔러서 새 토큰을 달라고 조릅니다.
-        // 이때 withCredentials: true 덕분에 브라우저가 알아서 쿠키(Refresh Token)를 백엔드로 보냅니다.
+        console.log('토큰 만료 감지: 새 토큰을 요청합니다...');
+        // 주의: 재발급 요청은 무한 루프 방지를 위해 axiosInstance가 아닌 원본 axios를 사용하거나 별도 설정 필요
         const response = await axios.post(
           'http://localhost:8080/api/members/reissue',
-          {}, 
+          {},
           { withCredentials: true }
         );
 
-        // 백엔드가 던져준 새로운 Access Token을 낚아챕니다.
         const newAccessToken = response.data.data.accessToken;
-
-        // Zustand 스토어(전역 상태)에 새 토큰을 업데이트합니다.
+        
+        // 스토어 업데이트 및 대기 중인 요청들 해제
         useAuthStore.getState().setAccessToken(newAccessToken);
-
-        // 아까 실패했던 원래 요청의 헤더에 새 토큰을 갈아 끼우고 다시 발사합니다! (고객은 에러가 났었는지도 모릅니다)
+        onTokenRefreshed(newAccessToken);
+        
+        // 원래 요청 다시 시도
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
 
       } catch (reissueError) {
-        // Refresh Token마저 만료되었거나 조작되어 심폐소생술에 실패한 경우
-        console.error('토큰 재발급 실패. 다시 로그인해야 합니다');
-        
-        // 스토어를 비우고 로그인 페이지로 강제 추방합니다.
+        console.error('세션이 만료되었습니다. 다시 로그인해주세요.');
         useAuthStore.getState().logout();
         window.location.href = '/login';
-        
         return Promise.reject(reissueError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
-    // 401 에러가 아니거나, 재시도했는데도 실패한 경우엔 원래 에러를 뱉어냅니다.
+    /**
+     * [★추가된 에러 처리★]
+     * 서버에서 내려준 ApiResponse의 에러 메시지가 있다면 그걸 사용합니다.
+     */
+    const serverMessage = error.response?.data?.message;
+    if (serverMessage) {
+      return Promise.reject(new Error(serverMessage));
+    }
+
     return Promise.reject(error);
   }
 );

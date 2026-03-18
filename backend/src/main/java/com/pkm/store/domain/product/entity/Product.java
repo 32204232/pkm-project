@@ -65,11 +65,11 @@ public class Product extends BaseEntity {
     public enum ProductStatus { PRE_ORDER, ON_SALE, OUT_OF_STOCK, END_OF_SALE }
 
 public void updateProduct(String name, int price, int stockQuantity, String imageUrl, 
-                          Category category, Series series, ProductStatus status, LocalDate releaseDate) {
+                          Category category, Series series, ProductStatus status, java.time.LocalDate releaseDate) {
     this.name = name;
     this.price = price;
     this.stockQuantity = stockQuantity;
-    this.imageUrl = imageUrl;
+    this.imageUrl = imageUrl; //
     this.category = category;
     this.series = series;
     this.status = status;
