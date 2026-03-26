@@ -51,4 +51,20 @@ public class CartService {
     public List<CartItem> getMyCart(Long memberId) {
         return cartItemRepository.findByMemberId(memberId);
     }
+    @Transactional
+    public void updateCount(Long cartItemId, int count) {
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new IllegalArgumentException("장바구니 항목을 찾을 수 없습니다."));
+        
+        // CartItem 엔티티에 수량 변경 메서드가 구현되어 있어야 합니다.
+        cartItem.updateCount(count); 
+    }
+
+    /**
+     * 장바구니 항목 삭제
+     */
+    @Transactional
+    public void deleteItem(Long cartItemId) {
+        cartItemRepository.deleteById(cartItemId);
+    }
 }

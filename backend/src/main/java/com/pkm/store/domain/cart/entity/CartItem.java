@@ -36,4 +36,11 @@ public class CartItem extends BaseEntity {
         this.product = product;
         this.count = count;
     }
+
+   public void updateCount(int count) {
+        if (count < 1) {
+            throw new IllegalArgumentException("수량은 1개 이상이어야 합니다.");
+        }
+        this.count = count;
+    }
 }

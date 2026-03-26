@@ -1,14 +1,14 @@
 spring:
   datasource:
-    # 다시 localhost -> mysql 로 변경!
-    url: jdbc:mysql://mysql:3306/pokemon_store?serverTimezone=Asia/Seoul
+    # localhost -> 도커 서비스 이름인 'mysql'로 변경
+    url: jdbc:mysql://mysql:3306/pokemon_store?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: vhzptahs12
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   data:
     redis:
-      # 다시 localhost -> redis 로 변경!
+      # localhost -> 도커 서비스 이름인 'redis'로 변경
       host: redis
       port: 6379
 
@@ -17,20 +17,19 @@ spring:
     hibernate:
       ddl-auto: update 
     show-sql: true
-    # [★핵심 해결책★] MySQL 8 버전의 문법(Dialect)을 쓰겠다고 명시적으로 박아줍니다.
     database-platform: org.hibernate.dialect.MySQL8Dialect 
     properties:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 1000
         use_sql_comments: true
+
   # 3. AWS S3 설정
   cloud:
     aws:
       s3:
         bucket: pkm-store-image-bucket
       region:
-        # [★수정] ap-northeast-2 가 서울입니다! (southeast는 호주 시드니입니다)
         static: ap-northeast-2 
       credentials:
         access-key: ${AWS_ACCESS_KEY}
@@ -47,7 +46,6 @@ jwt:
   secret: my-super-secret-key-for-pokemon-store-backend-must-be-long
   expiration: 3600000
 
-# application.yaml의 맨 아래에 추가합니다.
+# 토스페이먼츠 설정
 toss:
-  # 토스페이먼츠 개발자 센터에서 발급받은 '테스트 시크릿 키' (운영 시에는 실결제 키로 교체)
   secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R

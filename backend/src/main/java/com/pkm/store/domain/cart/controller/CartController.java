@@ -2,6 +2,7 @@ package com.pkm.store.domain.cart.controller;
 
 import com.pkm.store.domain.cart.dto.CartAddRequest;
 import com.pkm.store.domain.cart.dto.CartResponse;
+import com.pkm.store.domain.cart.dto.UpdateCountRequest;
 import com.pkm.store.domain.cart.entity.CartItem;
 import com.pkm.store.domain.cart.service.CartService;
 import com.pkm.store.domain.member.entity.Member;
@@ -51,4 +52,18 @@ public class CartController {
         // [수정] List<CartResponse>를 ApiResponse의 data 필드에 담아서 보냅니다.
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    // 수량 수정 엔드포인트 예시
+@PatchMapping("/{cartItemId}")
+public ResponseEntity<ApiResponse<Void>> updateCount(@PathVariable Long cartItemId, @RequestBody UpdateCountRequest request) {
+    cartService.updateCount(cartItemId, request.getCount());
+    return ResponseEntity.ok(ApiResponse.success("수량이 변경되었습니다.", null));
+}
+
+// 삭제 엔드포인트 예시
+@DeleteMapping("/{cartItemId}")
+public ResponseEntity<ApiResponse<Void>> deleteItem(@PathVariable Long cartItemId) {
+    cartService.deleteItem(cartItemId);
+    return ResponseEntity.ok(ApiResponse.success("장바구니에서 삭제되었습니다.", null));
+}
 }
