@@ -10,21 +10,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RedissonConfig {
 
-    @Value("${spring.data.redis.host:localhost}")
+    @Value("${spring.data.redis.host}")
     private String redisHost;
 
-    @Value("${spring.data.redis.port:6379}")
+    @Value("${spring.data.redis.port}")
     private int redisPort;
+
+    private static final String REDISSON_HOST_PREFIX = "redis://";
 
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        // 실무에서는 클러스터 모드(useClusterServers)를 쓰지만, 초기엔 싱글 서버로 구성합니다.
+        // 도커 환경의 서비스명 'redis' 또는 'localhost'를 주입받아 사용
         config.useSingleServer()
-              .setAddress("redis://" + redisHost + ":" + redisPort)
-              .setConnectionMinimumIdleSize(10)
-              .setConnectionPoolSize(50); // 오픈런 트래픽을 버티기 위한 커넥션 풀 확장
-              
+              .setAddress(REDISSON_HOST_PREFIX + redisHost + ":" + redisPort);
+        
         return Redisson.create(config);
     }
 }

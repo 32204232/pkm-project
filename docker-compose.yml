@@ -8,8 +8,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      # [주의] launch.json과 password를 통일해야 합니다. 여기서는 vhzptahs12로 맞춥니다.
-      MYSQL_ROOT_PASSWORD: vhzptahs12 
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD} # .env에서 가져옴
       MYSQL_DATABASE: pokemon_store
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
@@ -30,19 +29,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # DB 연결 정보 (localhost 대신 서비스명 'mysql' 사용)
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/pokemon_store?serverTimezone=Asia/Seoul
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=vhzptahs12
+      - SPRING_PROFILES_ACTIVE=prod 
+      - PROD_DB_URL=${DB_URL}
+      - PROD_DB_USERNAME=root
+      - PROD_DB_PASSWORD=${DB_ROOT_PASSWORD}
       - SPRING_DATA_REDIS_HOST=redis
-
-      # [★추가★] S3 설정 (launch.json에 있던 값 이식)
+      
+      # AWS 키 주입
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
 
-      # [★추가★] 보안을 위해 환경변수로 관리해야 하는 값들
-      - JWT_SECRET=my-super-secret-key-for-pokemon-store-backend-must-be-long
-      - TOSS_SECRET_KEY=test_sk_P9BRQmyarYxBGdbo6o4vVJ07KzLN
+      # 보안 및 결제 키 주입
+      - PROD_JWT_SECRET=${PROD_JWT_SECRET}
+      - TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
     depends_on:
       - mysql
       - redis
@@ -54,6 +53,8 @@ services:
     container_name: pkm-frontend
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
     volumes:
       - ./frontend:/app
       - /app/node_modules

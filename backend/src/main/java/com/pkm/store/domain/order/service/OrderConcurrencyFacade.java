@@ -16,6 +16,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+// backend/src/main/java/com/pkm/store/domain/order/service/OrderConcurrencyFacade.java
+
+// backend/src/main/java/com/pkm/store/domain/order/service/OrderConcurrencyFacade.java
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,7 +31,6 @@ public class OrderConcurrencyFacade {
     private final MemberRepository memberRepository;
 
     public Long createOrderSafely(Long memberId) {
-        // [★30년차 최적화★] 파사드에서 1번만 조회하고 Service로 넘겨 DB I/O를 반으로 줄임
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
                 
@@ -36,7 +39,7 @@ public class OrderConcurrencyFacade {
             throw new CustomException(ErrorCode.CART_EMPTY);
         }
 
-        // 1. 장바구니 상품 ID 추출 및 정렬 (데드락 방지용 정렬 유지)
+        // 1. 상품 ID 추출 및 정렬 (데드락 방지)
         List<Long> productIds = cartItems.stream()
                 .map(item -> item.getProduct().getId())
                 .distinct()
@@ -50,25 +53,32 @@ public class OrderConcurrencyFacade {
         
         RLock multiLock = redissonClient.getMultiLock(locks.toArray(new RLock[0]));
 
+        // [★수정] isLocked 변수를 try 밖에서 선언하여 finally에서 사용 가능하게 함
+        boolean isLocked = false; 
+
         try {
-            // 3. 락 획득 시도
-            boolean isLocked = multiLock.tryLock(5, 10, TimeUnit.SECONDS);
+            // 3. 락 획득 시도 (최대 5초 대기, 10초간 점유)
+            isLocked = multiLock.tryLock(5, 10, TimeUnit.SECONDS);
+            
             if (!isLocked) {
                 log.warn("주문 폭주로 인해 락 획득 실패 - memberId: {}", memberId);
-                // "주문이 폭주하고 있습니다. 잠시 후 다시 시도해주세요." 커스텀 에러 던지기
                 throw new CustomException(ErrorCode.ORDER_TIMEOUT); 
             }
 
-            // 4. 트랜잭션이 걸린 Service 호출 (미리 조회한 객체들을 넘겨줌)
-            // @Transactional이 걸린 내부 메서드가 완료(커밋)된 후 락이 해제됨 -> 완벽한 정합성 보장!
+            // 4. 비즈니스 로직 실행 (미리 조회한 객체 전달로 DB I/O 최적화)
             return orderService.createOrderFromCart(member, cartItems);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new CustomException(ErrorCode.SYSTEM_ERROR);
         } finally {
-            if (multiLock.isHeldByCurrentThread()) {
-                multiLock.unlock();
+            // [★핵심 수정] MultiLock은 boolean 플래그로 해제 여부를 결정하는 것이 가장 안전함
+            if (isLocked) {
+                try {
+                    multiLock.unlock();
+                } catch (IllegalMonitorStateException e) {
+                    log.error("이미 해제된 락을 해제하려 했습니다: {}", e.getMessage());
+                }
             }
         }
     }

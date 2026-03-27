@@ -13,6 +13,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.Map;
 
+// backend/src/main/java/com/pkm/store/domain/payment/service/PaymentService.java
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,15 +37,17 @@ public class PaymentService {
             return; 
         }
 
-        // 2. 금액 검증 (DB와 실제 결제 요청 금액 비교)
+        // 2. 금액 검증
         if (order.getTotalPrice() != amount) {
             log.error("금액 위변조 감지! DB: {}, 요청: {}", order.getTotalPrice(), amount);
+            // 위변조 시에도 주문을 취소하고 재고를 돌려놓는 것이 안전함
+            order.cancel(); 
             throw new IllegalArgumentException("결제 금액이 일치하지 않습니다.");
         }
 
-        // 3. ★수정 포인트★ 토스 인증 헤더 (setBasicAuth는 원문을 넣으면 알아서 인코딩함)
+        // 3. 토스 인증 헤더 설정
         HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(tossSecretKey, ""); // 비밀번호는 공백으로 둠
+        headers.setBasicAuth(tossSecretKey, "");
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> params = new HashMap<>();
@@ -61,18 +65,24 @@ public class PaymentService {
             );
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                order.completePayment(paymentKey); //
+                order.completePayment(paymentKey);
                 log.info("결제 승인 성공! Order UID: {}", orderUid);
+            } else {
+                // [★추가] 승인 거절 (잔액 부족 등) 시 재고 복구
+                log.error("결제 승인 실패: {}", response.getBody());
+                order.cancel();
+                throw new RuntimeException("결제 승인이 거절되었습니다.");
             }
         } catch (Exception e) {
+            // [★추가] 네트워크 장애나 타임아웃 발생 시 안전하게 재고 복구
             log.error("토스 서버 통신 중 에러 발생: {}", e.getMessage());
-            // 필요한 경우 여기서 재고 복구(order.cancel()) 등 수행
-            throw new RuntimeException("결제 승인 중 장애가 발생했습니다.");
+            order.cancel();
+            throw new RuntimeException("결제 처리 중 장애가 발생하여 주문이 자동 취소되었습니다.");
         }
     }
 
     /**
-     * [웹훅 처리 로직] 컨트롤러가 아닌 서비스에서 처리해야 함
+     * [웹훅 처리 로직]
      */
     @Transactional
     public void processWebhook(Map<String, Object> payload) {
@@ -80,19 +90,19 @@ public class PaymentService {
         String status = (String) payload.get("status");
         String paymentKey = (String) payload.get("paymentKey");
 
-        // 주문 상태를 엄격히 체크하여 중복 승인/취소 방지
         Order order = orderRepository.findByOrderUid(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
         if ("DONE".equals(status)) {
             if (order.getStatus() != Order.OrderStatus.COMPLETED) {
-                order.completePayment(paymentKey); //
+                order.completePayment(paymentKey);
                 log.info("웹훅: 결제 완료 처리 성공 - Order UID: {}", orderId);
             }
         } else if ("CANCELED".equals(status)) {
+            // [★수정] 웹훅으로 취소 신호가 와도 엔티티의 cancel()을 호출하여 재고 복구
             if (order.getStatus() != Order.OrderStatus.CANCELED) {
-                order.cancel(); //
-                log.info("웹훅: 결제 취소 처리 성공 - Order UID: {}", orderId);
+                order.cancel();
+                log.info("웹훅: 결제 취소 및 재고 복구 완료 - Order UID: {}", orderId);
             }
         }
     }

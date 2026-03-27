@@ -1,6 +1,6 @@
 // frontend/src/api/orderApi.ts
 import api from './axios';
-
+import axiosInstance from './axios';
 // [★수정★] 주문 생성 시 토스 결제에 필요한 정보들을 받기 위한 타입
 export interface OrderCreateResponse {
   orderUid: string;  // 서버에서 생성한 UUID (토스의 orderId로 사용)
@@ -24,6 +24,8 @@ export interface OrderResponse {
 
 export const orderApi = {
   // [★수정★] 이제 number가 아닌 OrderCreateResponse 객체를 반환합니다.
-  createOrder: (): Promise<OrderCreateResponse> => api.post('/api/orders'),
-  getOrderDetail: (orderId: string): Promise<OrderResponse> => api.get(`/api/orders/${orderId}`)
+  createOrder: () => axiosInstance.post('/api/orders'),
+  
+  // 주문 상세 조회 (숫자 ID 사용)
+  getOrder: (orderId: number) => axiosInstance.get(`/api/orders/${orderId}`),
 };

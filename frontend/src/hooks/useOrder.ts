@@ -1,66 +1,40 @@
 // frontend/src/hooks/useOrder.ts
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { orderApi } from '../api/orderApi';
 import { loadTossPayments } from '@tosspayments/payment-sdk';
-import { orderApi, type OrderResponse } from '../api/orderApi';
 
-// 1. 주문 및 결제 프로세스용 훅
+// frontend/src/hooks/useOrder.ts 수정
+
+// frontend/src/hooks/useOrder.ts
+
 export const useOrder = () => {
   const [isOrdering, setIsOrdering] = useState(false);
 
-  const checkout = async () => {
+  const checkout = async (orderName: string) => {
+    setIsOrdering(true);
     try {
-      setIsOrdering(true);
+      // 1. 주문 생성 (백엔드에서 숫자 ID만 반환 중인 경우 대비)
+      const orderId = await orderApi.createOrder(); 
       
-      // 1. 우리 서버에 가주문 생성 (결제에 필요한 데이터 수신)
-      // orderApi.ts에서 수정한 타입을 통해 비구조화 할당이 가능해집니다.
-      const { orderUid, totalPrice, orderName } = await orderApi.createOrder();
+      // 2. 상세 정보 다시 조회 (orderUid, totalPrice를 얻기 위해)
+      const res: any = await orderApi.getOrder(Number(orderId));
 
-      // 2. 토스페이먼츠 SDK 초기화
-      const clientKey = 'test_ck_P9BRQmyarYDZbLvaekm7VJ07KzLN';
+      const clientKey = "test_ck_D5mORe5J8Yq0P6vD06bR3u0Y9W6P";
       const tossPayments = await loadTossPayments(clientKey);
 
-      // 3. 결제창 띄우기
-      // 성공/실패 시 이동할 URL은 window.location.origin을 써서 유연하게 대처합니다.
       await tossPayments.requestPayment('카드', {
-        amount: totalPrice,
-        orderId: orderUid,
-        orderName: orderName,
+        amount: res.totalPrice, 
+        orderId: res.orderUid,  
+        orderName: orderName, // OrderResponse에 없으므로 파라미터로 받은 값을 그대로 사용
         successUrl: `${window.location.origin}/order/success`,
         failUrl: `${window.location.origin}/order/fail`,
       });
-
     } catch (error) {
-      console.error("결제 준비 중 에러 발생:", error);
-      alert("주문 처리 중 오류가 발생했습니다. 다시 시도해주세요 삐까!");
+      alert("주문 처리 중 오류가 발생했습니다.");
     } finally {
       setIsOrdering(false);
     }
   };
 
   return { checkout, isOrdering };
-};
-
-// 2. 주문 상세(영수증) 조회용 훅
-export const useOrderDetail = (orderId: string | undefined) => {
-  const [orderDetail, setOrderDetail] = useState<OrderResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!orderId) return;
-    
-    const fetchOrder = async () => {
-      try {
-        const data = await orderApi.getOrderDetail(orderId);
-        setOrderDetail(data);
-      } catch (err) {
-        console.error('Fetch order detail failed', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrder();
-  }, [orderId]);
-
-  return { orderDetail, loading };
 };

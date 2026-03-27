@@ -72,5 +72,22 @@ public class Order extends BaseEntity {
         }
         return order;
     }
-    public void cancel() { this.status = OrderStatus.CANCELED; }
+    public void cancel() {
+        if (this.status == OrderStatus.COMPLETED) {
+            throw new IllegalStateException("이미 결제가 완료된 주문은 취소할 수 없습니다.");
+        }
+        
+        // 중복 취소 방지 (이미 취소된 경우 무시)
+        if (this.status == OrderStatus.CANCELED) {
+            return;
+        }
+
+        this.status = OrderStatus.CANCELED;
+        
+        // 주문 항목을 돌며 각 상품의 재고를 원복함
+        for (OrderItem orderItem : orderItems) {
+            orderItem.getProduct().addStock(orderItem.getCount());
+        }
+    }
+    
 }

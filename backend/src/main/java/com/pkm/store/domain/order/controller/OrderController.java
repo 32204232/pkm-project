@@ -2,6 +2,7 @@ package com.pkm.store.domain.order.controller;
 
 import com.pkm.store.domain.member.entity.Member;
 import com.pkm.store.domain.member.repository.MemberRepository;
+import com.pkm.store.domain.order.dto.OrderCreateResponse;
 import com.pkm.store.domain.order.dto.OrderResponse;
 import com.pkm.store.domain.order.entity.Order; // Order 엔티티 임포트 추가
 import com.pkm.store.domain.order.service.OrderConcurrencyFacade;
@@ -26,16 +27,17 @@ public class OrderController {
     private final OrderService orderService; //
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Long>> createOrder(Principal principal) {
-        // 현재 로그인한 사용자 확인
-        Member member = memberRepository.findByEmail(principal.getName())
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(Principal principal) {
+    Member member = memberRepository.findByEmail(principal.getName())
+            .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 동시성 방어가 적용된 주문 서비스 호출
-        Long orderId = orderConcurrencyFacade.createOrderSafely(member.getId());
-
-        return ResponseEntity.ok(ApiResponse.success(orderId));
-    }
+    // 1. 주문 생성 및 PK 획득
+    Long orderId = orderConcurrencyFacade.createOrderSafely(member.getId());
+    
+    // 2. [추가] 결제창 연동을 위한 상세 정보 조회 및 반환
+    Order order = orderService.getOrder(orderId, member.getId());
+    return ResponseEntity.ok(ApiResponse.success(new OrderCreateResponse(order)));
+}
     
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrderDetail(
