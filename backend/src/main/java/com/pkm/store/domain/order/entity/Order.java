@@ -37,7 +37,7 @@ public class Order extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    public enum OrderStatus { PENDING, COMPLETED, CANCELLED }
+    public enum OrderStatus { PENDING, COMPLETED, CANCELED }
 
     // [결제 완료 처리]
     public void completePayment(String paymentKey) {
@@ -72,5 +72,5 @@ public class Order extends BaseEntity {
         }
         return order;
     }
-    public void cancel() { this.status = OrderStatus.CANCELLED; }
+    public void cancel() { this.status = OrderStatus.CANCELED; }
 }

@@ -1,20 +1,27 @@
 spring:
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
   datasource:
-    # localhost -> 도커 서비스 이름인 'mysql'로 변경
-    url: jdbc:mysql://mysql:3306/pokemon_store?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: root
-    password: vhzptahs12
+    # 도커 환경변수가 있으면 그것을 쓰고, 없으면 로컬 DB(localhost)를 기본값으로 사용합니다.
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/pokemon_store?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:vhzptahs12}
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   data:
     redis:
-      # localhost -> 도커 서비스 이름인 'redis'로 변경
-      host: redis
+      # 도커 환경에서는 'redis' 서비스명을, 로컬에서는 'localhost'를 사용합니다.
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: 6379
 
   # 2. JPA 설정
   jpa:
     hibernate:
+      # 운영 시에는 none 또는 validate로 변경해야 하지만, 개발 중에는 update를 유지합니다.
       ddl-auto: update 
     show-sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect 
@@ -30,8 +37,9 @@ spring:
       s3:
         bucket: pkm-store-image-bucket
       region:
-        static: ap-northeast-2 
+        static: ap-southeast-2
       credentials:
+        # 도커나 시스템 환경변수에서 직접 주입받습니다.
         access-key: ${AWS_ACCESS_KEY}
         secret-key: ${AWS_SECRET_KEY}
 
@@ -43,9 +51,11 @@ logging:
 
 # JWT 설정
 jwt:
-  secret: my-super-secret-key-for-pokemon-store-backend-must-be-long
+  # 보안을 위해 반드시 외부에서 주입받도록 설정합니다.
+  secret: ${JWT_SECRET:my-super-secret-key-for-local-development-only-must-be-long}
   expiration: 3600000
 
 # 토스페이먼츠 설정
 toss:
-  secret-key: test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R
+  # 결제 시크릿 키도 환경변수로 관리합니다.
+  secret-key: ${TOSS_SECRET_KEY}

@@ -54,4 +54,5 @@ public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptio
             .status(400)
             .body(new ApiResponse<>(false, 400, "입력값이 올바르지 않습니다.", errors));
 }
+
 }

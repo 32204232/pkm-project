@@ -8,14 +8,14 @@ import { Link } from 'react-router-dom';
 
 const CartPage = () => {
   const { items, loading, updateQuantity, removeItem, totalPrice } = useCartList();
-  const { checkout, isOrdering } = useOrder(); // isOrdering 추가
+  const { checkout, isOrdering } = useOrder();
 
   if (loading) return <MainLayout><div className="p-20 text-center">Loading...</div></MainLayout>;
 
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-black mb-8 italic">Shopping Cart</h1>
+        <h1 className="text-3xl font-black mb-8 italic uppercase">Shopping Cart</h1>
         
         {items.length === 0 ? (
           <EmptyCartView />
@@ -35,7 +35,7 @@ const CartPage = () => {
             <div className="lg:col-span-1">
               <CartSummary 
                 totalPrice={totalPrice} 
-                // [수정] 이제 checkout에 인자를 넘기지 않습니다.
+                // [수정] checkout 함수를 호출합니다.
                 onCheckout={checkout} 
                 isLoading={isOrdering}
               />
@@ -49,8 +49,8 @@ const CartPage = () => {
 
 const EmptyCartView = () => (
   <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-    <p className="text-gray-400 mb-6">Your cart is empty.</p>
-    <Link to="/" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold">Go Shopping</Link>
+    <p className="text-gray-400 mb-6">장바구니가 비어 있습니다 삐까!</p>
+    <Link to="/" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition">쇼핑하러 가기</Link>
   </div>
 );
 
