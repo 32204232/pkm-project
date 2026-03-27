@@ -5,6 +5,7 @@ import com.pkm.store.domain.cart.repository.CartItemRepository;
 import com.pkm.store.domain.member.entity.Member;
 import com.pkm.store.domain.member.repository.MemberRepository;
 import com.pkm.store.domain.order.entity.Order;
+import com.pkm.store.domain.order.entity.Order.OrderStatus;
 import com.pkm.store.domain.order.entity.OrderItem;
 import com.pkm.store.domain.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -85,4 +86,25 @@ public class OrderService {
 
         return order.getId();
     }
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+        // 이미 완료된 주문은 취소할 수 없도록 방어 (선택 사항)
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new IllegalStateException("이미 결제가 완료된 주문은 취소할 수 없습니다.");
+        }
+
+        // 1. 주문 상태 변경
+        // [주의] Order 엔티티에 setStatus 또는 cancel 메서드를 만들어야 할 수도 있습니다.
+        // 현재는 직접 필드 접근이 안 될 수 있으니 Order 엔티티에 아래 메서드를 추가하세요.
+        order.cancel(); 
+
+        // 2. 재고 복구 (모든 주문 항목에 대해)
+        order.getOrderItems().forEach(orderItem -> {
+            orderItem.getProduct().addStock(orderItem.getCount());
+        });
+    }
+    
 }

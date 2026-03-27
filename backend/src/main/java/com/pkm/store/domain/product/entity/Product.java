@@ -88,4 +88,7 @@ public void updateProduct(String name, int price, int stockQuantity, String imag
         }
         this.stockQuantity = restStock;
     }
+    public void addStock(int quantity) {
+    this.stockQuantity += quantity;
+}
 }
