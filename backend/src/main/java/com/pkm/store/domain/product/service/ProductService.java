@@ -35,6 +35,8 @@ public class ProductService {
      */
     @Transactional
     public Long createProduct(ProductCreateRequest request, MultipartFile imageFile) {
+        validateImageFile(imageFile);
+        
         String imageUrl = null;
 
         // 1. S3 이미지 업로드 로직 (이전과 동일)
@@ -127,4 +129,19 @@ public void updateProduct(Long id, ProductCreateRequest request, MultipartFile i
         return productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 포켓몬 상자입니다."));
     }
+
+    private void validateImageFile(MultipartFile file) {
+    if (file == null || file.isEmpty()) return;
+
+    // 1. 파일 크기 제한 (예: 5MB)
+    if (file.getSize() > 5 * 1024 * 1024) {
+        throw new IllegalArgumentException("파일 크기는 5MB를 초과할 수 없습니다.");
+    }
+
+    // 2. 확장자 체크
+    String contentType = file.getContentType();
+    if (contentType == null || !contentType.startsWith("image/")) {
+        throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다.");
+    }
+}
 }

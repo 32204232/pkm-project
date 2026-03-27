@@ -1,14 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore'; //
+import { useAuthStore } from '../store/authStore'; 
 
 const Navbar = () => {
-  const { isLoggedIn, logout, userEmail } = useAuthStore();
+  // [★수정★] userRole을 추가로 가져옵니다.
+  const { isLoggedIn, logout, userEmail, userRole } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    alert('Logged out successfully.');
+    alert('성공적으로 로그아웃되었습니다.');
     navigate('/');
   };
 
@@ -16,7 +17,8 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
-          {/* 로고 영역 - 포켓볼 디자인 복구 */}
+          
+          {/* 로고 영역 */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 bg-red-500 rounded-full border-4 border-black relative overflow-hidden group-hover:rotate-12 transition-transform shadow-md">
@@ -26,12 +28,25 @@ const Navbar = () => {
               <span className="text-2xl font-black tracking-tighter italic">PKM STORE</span>
             </Link>
           </div>
-
+          
           {/* 우측 아이콘 & 인증 영역 */}
           <div className="flex items-center space-x-5">
             <Link to="/cart" className="relative p-2 text-gray-600 hover:text-blue-600 font-bold text-sm">
               CART
             </Link>
+
+            {/* [★추가★] 관리자 권한일 때만 보이는 '관리자 모드' 버튼 */}
+            {isLoggedIn && userRole === 'ADMIN' && (
+              <>
+                <div className="h-6 w-[1px] bg-gray-200 mx-1"></div>
+                <Link 
+                  to="/admin" 
+                  className="px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-xs font-black hover:bg-red-100 transition-colors"
+                >
+                  ADMIN MODE
+                </Link>
+              </>
+            )}
 
             <div className="h-6 w-[1px] bg-gray-200 mx-2"></div>
             
@@ -58,5 +73,4 @@ const Navbar = () => {
   );
 };
 
-// [중요] 이 부분이 있어야 MainLayout에서 에러가 안 납니다!
 export default Navbar;
